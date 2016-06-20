@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>用json完善运动框架实现多物体同时运动</title>
+<style type="text/css">
+body,ul,li{margin:0;padding:0;}
+ul,li{ list-style:none;}
+ul li{width:200px;
+ height:100px;
+ background:yellow;
+ font-size:12px;
+ color: #000000;
+ line-height:100px;
+ text-align:center;
+ margin-bottom:20px;
+ border:2px solid #000000;/*（加边框后运动会出现问题，因为offsetWidrth会增大）解决方法，可以把width属性写在行内，也可以另外写一个getStyle函数*/
+filter:alpha(opacity:30);/*ie*透明度满值为100*/
+opacity:0.3;/*非ie透明度满值为1*/
+}
+</style>
+<script type="text/javascript">
+window.onload=function(){
+	var ali=document.getElementsByTagName("li");
+	for(var i=0;i<ali.length;i++){
+		ali[i].timer=null;
+		ali[i].onmouseover=function(){
+			var This=this;//此时this对象已经变化，因为move形式了闭包，作用域跳出到Window下，因此这里使用this代表Window而不是ali了。
+			move(This,{width:201,height:200,opacity:100});
+		}
+		ali[i].onmouseout=function(){
+			var This=this;
+			move(This,{opacity:30,height:100,width:200});
+		}	
+	}
+}
+//var timer=null;//此时因为所有的li公用一个定时器，所以当鼠标快速移动的时候会出现延迟的结果，所以要把定时器分布到每一个li上；
+//用json的时候，此时attr和target可以看做一对json值。
+/*function move(obj,attr,target,fn){
+	clearInterval(obj.timer);
+    
+	obj.timer=setInterval(function(){
+		var icur=0;
+		if(attr=='opacity'){
+			 icur=Math.round(parseFloat(getStyle(obj,attr))*100);//Math.round()四舍五入
+		}else{
+			 icur=parseInt(getStyle(obj,attr));
+		}
+		
+		var speed=(target-icur)/8;
+
+		speed=speed>0?Math.ceil(speed):Math.floor(speed);
+		
+		if(icur==target){
+			clearInterval(obj.timer);
+			if(fn){
+			fn();
+			}
+		}else{
+			if(attr=='opacity'){
+				obj.style.filter='alpha(opacity:'+(icur+speed)+')';//ie
+				obj.style.opacity=(icur+speed)/100;
+			}else{
+				obj.style[attr]=icur+speed+'px';
+			}
+	
+		}
+	},30);
+
+}*/
+//json格式{属性名称：值，属性名称：值}
+//move(obj,{attr1:target, attr2:target},fn)，把target相当于json[attr]其表示就是属性的值;
+function move(obj,json,fn){
+	var flag=true;//假设所有的运动都到达了目标值 
+	clearInterval(obj.timer);
+	obj.timer=setInterval(function(){
+		for(var attr in json){//用json来通过框架的循环来实现多物体的运动即同时调用move（）函数
+		   //1.取当前值
+			var icur=0;//用icur来表示获取的实际属性的值。
+			if(attr=='opacity'){
+				 icur=Math.round(parseFloat(getStyle(obj,attr))*100);//Math.round()四舍五入
+			}else{
+				 icur=parseInt(getStyle(obj,attr));
+			}
+			//2.算速度
+			var speed=(json[attr]-icur)/8;
+	
+			speed=speed>0?Math.ceil(speed):Math.floor(speed);
+			//3.检测停止
+			//if(icur==json[attr]){//会出现问题：只要有一个达到目标值时候，所有的运动的定时器都停止了，导致如果一个属性变化量太小，另外的也打不到目标值。处理思想：所有的都到达目标值之后才可以关闭定时器，换句话来讲就是有不到达的就不能关闭定时器。于是定义个标杆var flag=true;
+			if(icur!==json[attr]){//如果所有的没有达到目标值，说明标杆是假的。
+				flag=false;	
+			}//判断了没有达到目标值，之后继续执行设置属性目标值这一步。
+			if(attr=='opacity'){
+				obj.style.filter='alpha(opacity:'+(icur+speed)+')';//ie
+				obj.style.opacity=(icur+speed)/100;
+			}else{
+				obj.style[attr]=icur+speed+'px';
+			}
+		    if(flag){//如果flag是真的，那就说明所有的都已经达到了目标值，然后再关闭定时器， 检测有无函数调用。
+					clearInterval(obj.timer);
+				if(fn){
+				fn();
+				}
+			} 
+		}
+	},30);
+
+}
+function getStyle(obj,attr){
+	if(obj.currentStyle){//针对IE浏览器
+		return obj.currentStyle[attr];
+	}else{
+		return window.getComputedStyle(obj,null)[attr];
+	}
+}
+
+</script>
+</head>
+<body>
+	<ul>
+		<li>这是第一个</li>
+		<li>这是第二个</li>
+		<li>这是第三个</li>
+	</ul>
+	
+</body>
+</html>
